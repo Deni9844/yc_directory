@@ -5,17 +5,20 @@ import { writeClient } from "@/sanity/lib/write-client";
 import { after } from "next/server";
 
 const View = async ({ id }: { id: string }) => {
-  const { views: totalViews } = await client
+  // Increment the view count
+  const { views: currentViews } = await client
     .withConfig({ useCdn: false })
     .fetch(STARTUP_VIEWS_QUERY, { id });
 
-  after(
-    async () =>
-      await writeClient
-        .patch(id)
-        .set({ views: totalViews + 1 })
-        .commit(),
-  );
+  await writeClient
+    .patch(id)
+    .set({ views: currentViews + 1 })
+    .commit();
+
+  // Re-fetch updated views
+  const { views: updatedViews } = await client
+    .withConfig({ useCdn: false })
+    .fetch(STARTUP_VIEWS_QUERY, { id });
 
   return (
     <div className="view-container">
@@ -24,9 +27,12 @@ const View = async ({ id }: { id: string }) => {
       </div>
 
       <p className="view-text">
-        <span className="font-black">{ totalViews > 1 ? "Views" : "View"}: {totalViews}</span>
+        <span className="font-black">
+          {updatedViews > 1 ? "Views" : "View"}: {updatedViews}
+        </span>
       </p>
     </div>
   );
 };
+
 export default View;
